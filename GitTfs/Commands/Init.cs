@@ -118,7 +118,9 @@ namespace Sep.Git.Tfs.Commands
                 }
             }
 
+
             globals.Repository.SetConfig(GitTfsConstants.IgnoreBranches, false.ToString());
+            globals.Repository.SetConfig(GitTfsConstants.BranchesToSkip, initOptions.BranchesToSkip == null ? "" : initOptions.BranchesToSkip);
 
         }
 

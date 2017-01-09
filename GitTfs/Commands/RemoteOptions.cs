@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using NDesk.Options;
 using Sep.Git.Tfs.Util;
+using System.IO;
 
 namespace Sep.Git.Tfs.Commands
 {
@@ -17,6 +18,8 @@ namespace Sep.Git.Tfs.Commands
                 {
                     { "ignore-regex=", "A regex of files to ignore",
                         v => IgnoreRegex = v },
+                    { "ignore-regex-file=", "A file containing regex of files to ignore",
+                        v => IgnoreRegex = string.Join("|",File.ReadAllLines(v)) },
                     { "except-regex=", "A regex of exceptions to '--ignore-regex'",
                         v => ExceptRegex = v},
                     { "u|username=", "TFS username",

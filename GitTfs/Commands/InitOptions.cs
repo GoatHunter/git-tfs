@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using NDesk.Options;
 using Sep.Git.Tfs.Util;
+using System.IO;
 
 namespace Sep.Git.Tfs.Commands
 {
@@ -28,6 +29,8 @@ namespace Sep.Git.Tfs.Commands
                         v => GitInitIgnoreCase = ValidateIgnoreCaseValue(v) },
                     {"bare", "Clone the TFS repository in a bare git repository", v => IsBare = v != null},
                     {"workspace=", "Set tfs workspace to a specific folder (a shorter path is better!)", v => WorkspacePath = v},
+                    {"gitignore=", "Path toward the .gitignore file which be committed and used to ignore files", v => GitIgnorePath = v},
+                    {"skip-branches-file", "Path to file containing a list of TFS branches that should be skipped.", v => BranchesToSkip = string.Join("|", File.ReadAllLines(v))}
                 };
             }
         }
@@ -55,5 +58,7 @@ namespace Sep.Git.Tfs.Commands
         public object GitInitShared { get; set; }
         public string GitInitAutoCrlf { get; set; }
         public string GitInitIgnoreCase { get; set; }
+        public string GitIgnorePath { get; set; }
+        public string BranchesToSkip { get; set; }
     }
 }

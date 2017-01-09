@@ -9,6 +9,7 @@ using Sep.Git.Tfs.Core;
 using StructureMap;
 using Sep.Git.Tfs.Util;
 using Sep.Git.Tfs.Core.TfsInterop;
+using System.IO;
 
 namespace Sep.Git.Tfs.Commands
 {
@@ -50,6 +51,7 @@ namespace Sep.Git.Tfs.Commands
                     { "u|username=", "TFS username", v => TfsUsername = v },
                     { "p|password=", "TFS password", v => TfsPassword = v },
                     { "ignore-regex=", "A regex of files to ignore", v => IgnoreRegex = v },
+                    { "ignore-regex-file=", "A file containing regex of files to ignore", v => IgnoreRegex = string.Join("|",File.ReadAllLines(v)) },
                     { "except-regex=", "A regex of exceptions to ignore-regex", v => ExceptRegex = v},
                     { "no-fetch", "Create the new TFS remote but don't fetch any changesets", v => NoFetch = (v != null) }
                 };
@@ -265,6 +267,7 @@ namespace Sep.Git.Tfs.Commands
         private void InitializeBranches(IGitTfsRemote defaultRemote, List<BranchDatas> childBranchPaths)
         {
             _stdout.WriteLine("Tfs branches found:");
+
             var branchesToProcess = new List<BranchDatas>();
             foreach (var tfsBranchPath in childBranchPaths)
             {

@@ -53,6 +53,7 @@ namespace Sep.Git.Tfs.Commands
                     { "delete", "Delete a TFS remote", v => ShouldDeleteRemote = (v != null) },
                     { "init", "Initialize an existing TFS branch", v => ShouldInitBranch = (v != null) },
                     { "ignore-regex=", "A regex of files to ignore", v => IgnoreRegex = v },
+                    { "ignore-regex-file=", "A file containing regex of files to ignore", v => IgnoreRegex = string.Join("|",File.ReadAllLines(v)) },
                     { "except-regex=", "A regex of exceptions to ignore-regex", v => ExceptRegex = v},
                     { "no-fetch", "Don't fetch changeset for newly initialized branch(es)", v => NoFetch = (v != null) },
                     { "b|tfs-parent-branch=", "TFS Parent branch of the TFS branch to clone (TFS 2008 only! And required!!) ex: $/Repository/ProjectParentBranch", v => ParentBranch = v },
