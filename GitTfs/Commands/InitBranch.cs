@@ -9,7 +9,7 @@ using Sep.Git.Tfs.Core;
 using StructureMap;
 using Sep.Git.Tfs.Util;
 using Sep.Git.Tfs.Core.TfsInterop;
-using System.IO;
+
 
 namespace Sep.Git.Tfs.Commands
 {
@@ -267,10 +267,20 @@ namespace Sep.Git.Tfs.Commands
         private void InitializeBranches(IGitTfsRemote defaultRemote, List<BranchDatas> childBranchPaths)
         {
             _stdout.WriteLine("Tfs branches found:");
-
+            
+            var branchesToSkipList =_globals.Repository.GetConfig(GitTfsConstants.BranchesToSkip).Split('|');
+            
             var branchesToProcess = new List<BranchDatas>();
             foreach (var tfsBranchPath in childBranchPaths)
             {
+                
+                var shouldSkipBranch = (branchesToSkipList.FirstOrDefault(x => x.IndexOf(tfsBranchPath.TfsRepositoryPath) >= 0) != null);
+                if (shouldSkipBranch)
+                {
+                    Trace.WriteLine("Skipping branch due to it being in ignore list: {} ", tfsBranchPath.TfsRepositoryPath);
+                    continue;
+                }
+
                 _stdout.WriteLine("- " + tfsBranchPath.TfsRepositoryPath);
                 var branchDatas = new BranchDatas
                     {

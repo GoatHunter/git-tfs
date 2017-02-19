@@ -328,7 +328,9 @@ namespace Sep.Git.Tfs.Core
             // TFS 2010 doesn't like when we ask for history past its last changeset.
             if (MaxChangesetId >= latestChangesetId)
                 return fetchResult;
-                        
+
+            var branchesToSkipList = globals.Repository.GetConfig(GitTfsConstants.BranchesToSkip).Split('|');
+
             bool fetchRetrievedChangesets;
             do
             {
@@ -344,7 +346,10 @@ namespace Sep.Git.Tfs.Core
                     if (lastChangesetIdToFetch > 0 && changeset.Summary.ChangesetId > lastChangesetIdToFetch)
                         return fetchResult;
                     string parentCommitSha = null;
-                    if (changeset.IsMergeChangeset && !ProcessMergeChangeset(changeset, stopOnFailMergeCommit, ref parentCommitSha))
+
+                    var shouldSkipBranch = (branchesToSkipList.FirstOrDefault(x => x.IndexOf(changeset.Summary.Remote.Id) >= 0) != null);
+
+                    if (shouldSkipBranch || (changeset.IsMergeChangeset && !ProcessMergeChangeset(changeset, stopOnFailMergeCommit, ref parentCommitSha)))
                     {
                         fetchResult.IsSuccess = false;
                         return fetchResult;
@@ -640,32 +645,41 @@ namespace Sep.Git.Tfs.Core
             }
 
             var branchesDatas = Tfs.GetRootChangesetForBranch(tfsBranch.Path, parentChangesetId);
-
+            var branchesToSkipList = globals.Repository.GetConfig(GitTfsConstants.BranchesToSkip).Split('|');
+            
             IGitTfsRemote remote = null;
             foreach (var branch in branchesDatas)
             {
-                var rootChangesetId = branch.RootChangeset;
-                remote = InitBranch(this.remoteOptions, tfsBranch.Path, rootChangesetId, true);
-                if (remote == null)
+                var shouldSkipBranch = (branchesToSkipList.FirstOrDefault(x => branch.TfsBranchPath.IndexOf(x) >= 0) != null);
+                if (shouldSkipBranch)
                 {
-                    stdout.WriteLine("warning: root commit not found corresponding to changeset " + rootChangesetId);
-                    stdout.WriteLine("=> continuing anyway by creating a branch without parent...");
-                    return InitTfsBranch(this.remoteOptions, tfsBranch.Path);
+                    stdout.WriteLine("Skipping branch: (specified by user):" + branch.TfsBranchPath);
                 }
-
-                if (branch.IsRenamedBranch)
+                else
                 {
-                    try
+                    var rootChangesetId = branch.RootChangeset;
+                    remote = InitBranch(this.remoteOptions, tfsBranch.Path, rootChangesetId, true);
+                    if (remote == null)
                     {
-                        remote.Fetch(renameResult: renameResult);
+                        stdout.WriteLine("warning: root commit not found corresponding to changeset " + rootChangesetId);
+                        stdout.WriteLine("=> continuing anyway by creating a branch without parent...");
+                        return InitTfsBranch(this.remoteOptions, tfsBranch.Path);
                     }
-                    finally
-                    {
-                        Trace.WriteLine("Cleaning...");
-                        remote.CleanupWorkspaceDirectory();
 
-                        if (remote.Repository.IsBare)
-                            remote.Repository.UpdateRef(GitRepository.ShortToLocalName(remote.Id), remote.MaxCommitHash);
+                    if (branch.IsRenamedBranch)
+                    {
+                        try
+                        {
+                            remote.Fetch(renameResult: renameResult);
+                        }
+                        finally
+                        {
+                            Trace.WriteLine("Cleaning...");
+                            remote.CleanupWorkspaceDirectory();
+
+                            if (remote.Repository.IsBare)
+                                remote.Repository.UpdateRef(GitRepository.ShortToLocalName(remote.Id), remote.MaxCommitHash);
+                        }
                     }
                 }
             }
@@ -957,6 +971,8 @@ namespace Sep.Git.Tfs.Core
         private IGitTfsRemote InitTfsBranch(RemoteOptions remoteOptions, string tfsRepositoryPath, int rootChangesetId = -1, bool fetchParentBranch = false, string gitBranchNameExpected = null, IRenameResult renameResult = null)
         {
             Trace.WriteLine("Begin process of creating branch for remote :" + tfsRepositoryPath);
+            
+
             // TFS string representations of repository paths do not end in trailing slashes
             tfsRepositoryPath = (tfsRepositoryPath ?? string.Empty).TrimEnd('/');
 
@@ -964,6 +980,7 @@ namespace Sep.Git.Tfs.Core
                 string.IsNullOrWhiteSpace(gitBranchNameExpected) ? tfsRepositoryPath : gitBranchNameExpected);
             if (string.IsNullOrWhiteSpace(gitBranchName))
                 throw new GitTfsException("error: The Git branch name '" + gitBranchName + "' is not valid...\n");
+
             Trace.WriteLine("Git local branch will be :" + gitBranchName);
 
             string sha1RootCommit = null;
